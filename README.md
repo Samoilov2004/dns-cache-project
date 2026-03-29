@@ -1,9 +1,22 @@
 # dns-cache-project
-[![Redis](https://img.shields.io/badge/Redis-DD0031?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
-[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-[![Unbound](https://img.shields.io/badge/DNS-Unbound-1E90FF?style=for-the-badge&logo=https%3A%2F%2Fraw.githubusercontent.com%2FSamoilov2004%2Fdns-cache-project%2Fmain%2Freport%2Fassets%2Funbound.svg&logoColor=white)](https://nlnetlabs.nl/projects/unbound/about/)
-[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=FFD43B)](https://www.python.org/)
-[![Status](https://img.shields.io/badge/status-in%20progress-yellow?style=for-the-badge)](#)
+<p align="left">
+  <a href="https://redis.io/">
+    <img src="https://cdn.simpleicons.org/redis/DD0031" alt="Redis" height="40">
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://www.docker.com/">
+    <img src="https://cdn.simpleicons.org/docker/2496ED" alt="Docker" height="40">
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://nlnetlabs.nl/projects/unbound/about/">
+    <img src="./report/assets/unbound.svg" alt="Unbound" height="40">
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://www.python.org/">
+    <img src="https://cdn.simpleicons.org/python/3776AB" alt="Python" height="40">
+  </a>
+</p>
+
 
 
 Думаю что структура будет +- такая
