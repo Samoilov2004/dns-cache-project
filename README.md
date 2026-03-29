@@ -1,7 +1,7 @@
 # dns-cache-project
 [![Redis](https://img.shields.io/badge/Redis-%23DD0031.svg?logo=redis&logoColor=white)](#)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=fff)](#)
-https://img.shields.io/badge/DNS-Unbound-blue?logo=https%3A%2F%2Fraw.githubusercontent.com%2FSamoilov2004%2Fdns-cache-project%2Fmain%2Freport%2Fassets%2Funbound.svg&logoColor=white
+[![Unbound](https://img.shields.io/badge/DNS-Unbound-blue?logo=https%3A%2F%2Fraw.githubusercontent.com%2FSamoilov2004%2Fdns-cache-project%2Fmain%2Freport%2Fassets%2Funbound.svg&logoColor=white)](#)
 
 
 Думаю что структура будет +- такая
