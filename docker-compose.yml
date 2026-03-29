@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   redis:
     image: redis:7
@@ -14,6 +16,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  unbound:
+    build: ./unbound
+    container_name: dns-unbound
+    ports:
+      - "2053:53/udp"
+      - "2053:53/tcp"
+    restart: unless-stopped
 
 volumes:
   redis_data:
