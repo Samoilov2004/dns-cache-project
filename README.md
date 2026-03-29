@@ -1,22 +1,18 @@
 # dns-cache-project
-<p align="left">
+<p>
   <a href="https://redis.io/">
-    <img src="https://cdn.simpleicons.org/redis/DD0031" alt="Redis" height="40">
+    <img src="https://img.shields.io/badge/Redis-DD0031?style=for-the-badge&logo=redis&logoColor=white" alt="Redis">
   </a>
-  &nbsp;&nbsp;
   <a href="https://www.docker.com/">
-    <img src="https://cdn.simpleicons.org/docker/2496ED" alt="Docker" height="40">
+    <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
   </a>
-  &nbsp;&nbsp;
   <a href="https://nlnetlabs.nl/projects/unbound/about/">
-    <img src="./report/assets/unbound.svg" alt="Unbound" height="40">
+    <img src="https://img.shields.io/badge/Unbound-0B0C2E?style=for-the-badge&logo=https%3A%2F%2Fraw.githubusercontent.com%2FSamoilov2004%2Fdns-cache-project%2Fmain%2Freport%2Fassets%2Funbound-icon.svg&logoColor=white" alt="Unbound">
   </a>
-  &nbsp;&nbsp;
   <a href="https://www.python.org/">
-    <img src="https://cdn.simpleicons.org/python/3776AB" alt="Python" height="40">
+    <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=FFD43B" alt="Python">
   </a>
 </p>
-
 
 
 Думаю что структура будет +- такая
