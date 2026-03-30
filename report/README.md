@@ -13,6 +13,12 @@ docker compose ps
 Если необходимо перезапустить можно так
 ```bash
 docker compose up -d --build unbound
+docker compose up -d --build redis
+```
+
+Очистка Redis
+```bash
+docker compose exec redis redis-cli FLUSHALL
 ```
 
 # Общее описание архитектуры
@@ -264,7 +270,7 @@ dig @127.0.0.1 -p 2053 yandex.ru A
 - 3. Самописный плагин на c++
 
 Скорее всего будет использован
-> Использован нативный модуль Unbound cachedb, работающий с Redis. Для управления временем хранения в Redis добавлен patch на C.
+> Python и PythonMod
 
 client -> Unbound [cachedb(C) + validator + iterator] -> Redis / Internet
 
@@ -275,45 +281,229 @@ client -> Unbound [cachedb(C) + validator + iterator] -> Redis / Internet
 - после получения ответа он кладет данные в Redis;
 - Redis становится реальным внешним источником ответов.
 
-## 2.1 Подключить к резолверу внешний кэш, например, redis или подобную БД
-Запустим сервисы, если это еще не сделано и проверим, что Redis жив
+Чтобы запускать скрипты и докер не ломался надо так
 ```bash
+/opt/venv/bin/python script.py
+```
+
+## 2 PythonMod
+После исследования встроенного кэша Unbound следующим этапом была реализация внешнего кэша DNS-ответов.
+В качестве внешней базы данных был выбран Redis, так как он:
+
+быстро работает в режиме key-value;
+поддерживает TTL ключей;
+позволяет хранить данные дольше исходного DNS TTL;
+легко интегрируется с Python;
+подходит для локального стенда в Docker.
+
+Редис мы настроим на таком порте - для компромисса между удобством и безопасностью
+```txt
+ports:
+  - "127.0.0.1:6379:6379"
+```
+
+Для реализации внешнего кэша был выбран следующий подход:
+- Unbound остается основным DNS-резолвером;
+- Redis используется как внешнее хранилище DNS-ответов;
+- связь между Unbound и Redis реализуется через pythonmod внутри Unbound.
+
+Для реализации этой части проекта потребовалось:
+- поднять Redis как отдельный сервис;
+- пересобрать Unbound из исходного кода с поддержкой Python-модулей;
+- подключить Python-модуль redis_pythonmod.py;
+- реализовать скрипт fill_cache.py для сохранения DNS-ответов во внешний кэш.
+
+Особенности реализации
+- **Redis** - Redis был поднят как отдельный контейнер Docker с персистентным volume. Для того чтобы контейнер Unbound мог обращаться к Redis по внутренней Docker-сети, Redis был настроен с доступом из контейнерной сети стенда.
+- **Unbound** - Стандартный пакет Unbound не всегда содержит поддержку pythonmod, поэтому резолвер был собран из исходного кода с флагами `--with-pythonmodule`, `--with-pyunbound`, Это позволило подключить собственный Python-модуль непосредственно в пайплайн обработки DNS-запроса.
+
+Формат ключей Redis:
+Для хранения использовались ключи вида `dns:cache:<fqdn>:<qtype>`, а значением был json со следующими полями.
+- qname
+- qtype
+- rcode
+- answers
+- original_ttl
+- stored_at
+- admin_expire_at
+- source
+- dnssec_status
+
+Пример:
+```json
+{
+  "qname": "yandex.ru.",
+  "qtype": "A",
+  "rcode": "NOERROR",
+  "answers": [
+    {
+      "name": "yandex.ru.",
+      "type": "A",
+      "ttl": 60,
+      "data": "77.88.44.55"
+    },
+    {
+      "name": "yandex.ru.",
+      "type": "A",
+      "ttl": 60,
+      "data": "77.88.55.88"
+    },
+    {
+      "name": "yandex.ru.",
+      "type": "A",
+      "ttl": 60,
+      "data": "5.255.255.77"
+    }
+  ],
+  "original_ttl": 60,
+  "stored_at": 1730000000,
+  "admin_expire_at": 1730086400,
+  "source": "fill_cache_script",
+  "dnssec_status": "unchecked"
+}
+```
+
+# 1.2А - Подключить к резолверу внешний кэш, например Redis
+Redis был добавлен в docker-compose.yml как отдельный сервис, Unbound был пересобран из исходного кода с поддержкой Python-модулей.
+Контейнер Unbound получил переменные окружения:
+```txt
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_DB=0
+```
+
+Проверим скриптом
+```bash
+docker compose up -d --build
+docker compose logs unbound
+docker exec -it dns-unbound /usr/local/sbin/unbound -V | grep -i python
 docker exec -it dns-redis redis-cli ping
-```
-
-Проверим, что Unbound поднялся
-```bash
-docker logs dns-unbound
-```
-
-Проверка версии Unbound и проверка конфига
-```bash
-docker exec -it dns-unbound unbound -V
-docker exec -it dns-unbound unbound-checkconf /etc/unbound/unbound.conf
-```
-
-![Скриншот6](assets/terminal_screenshot_6.png)
-
-Для доказательства того, что redis и правда работает проведем такой вот эксперимент, в первом окне откроем мониторинг redis
-
-```bash
-docker exec -it dns-redis redis-cli MONITOR
-```
-
-А во втором введем DNS-запрос
-```bash
-dig @127.0.0.1 -p 2053 vk.ru A
 ```
 
 ![Скриншот6_1](assets/terminal_screenshot_6_1.png)
 
-А в мониторинге видим
+Таким образом, внешний кэш был интегрирован не как отдельный внешний сервис “рядом”, а как часть механизма обработки DNS-запросов в самом резолвере.
 
+## 1.2.Б Проверить механизм кэширования с этой внешней БД
+Проверить, что Redis действительно участвует в обработке запросов и что Unbound различает состояния:
+```txt
+redis_miss — записи нет;
+redis_hit — запись найдена.
+```
+
+Проведем запрос к яндексу
+```bash
+dig @127.0.0.1 -p 2053 yandex.ru A
+docker compose logs unbound
+```
 ![Скриншот6_2](assets/terminal_screenshot_6_2.png)
 
-
-## 2.2 
-Перед тестом очистим redis
-```bash
-docker exec -it dns-redis redis-cli FLUSHALL
+В логах видим
+```TXT
+redis_miss qname=yandex.ru. qtype=A key=dns:cache:yandex.ru.:A
 ```
+
+А теперь добавим значение в редис, перезапустим unbound, чтобы его встроенный кеш обновился, а затем тот же запрос зададим:
+```bash
+python scripts/fill_cache.py yandex.ru A 86400
+docker compose restart unbound
+dig @127.0.0.1 -p 2053 yandex.ru A
+docker compose logs --since=20s unbound
+```
+![Скриншот6_3](assets/terminal_screenshot_6_3.png)
+
+Видим результат
+```txt
+redis_hit qname=yandex.ru. qtype=A key=dns:cache:yandex.ru.:A
+```
+
+А значит, что механизм внешнего кэширования был подтвержден:
+- до записи в Redis наблюдался redis_miss;
+- после записи в Redis и перезагрузки unbound — redis_hit.
+
+## 1.2 B - Реализовать механизм ответов DNS-резолвера из этой внешней БД
+Показать, что DNS-резолвер может не просто хранить записи в Redis, а реально отвечать клиенту данными из внешней БД.
+
+Модуль redis_pythonmod.py был реализован так, чтобы:
+- принимать запрос в Unbound;
+- извлекать имя и тип записи;
+- искать JSON-ответ в Redis;
+- если запись найдена — формировать DNSMessage и завершать обработку запроса на уровне pythonmod;
+- не передавать запрос дальше в обычный итератор Unbound.
+
+Этого достаточно, потому что если ответ формируется внутри pythonmod, значит источник ответа — именно Redis, а не внешняя DNS-инфраструктура и не штатный memory cache Unbound.
+
+Эксперимент строится так, положим в redis значение, а затем перезапустим только Unbound и проверим нашу запись в редис
+```bash
+python scripts/fill_cache.py yandex.ru A 86400
+docker compose restart unbound
+
+docker exec -it dns-redis redis-cli GET dns:cache:yandex.ru.:A
+docker exec -it dns-redis redis-cli TTL dns:cache:yandex.ru.:A
+```
+![Скриншот6_4](assets/terminal_screenshot_6_4.png)
+
+Пока что все штатно, во втором терминале откроем tcpdump за слежкой трафика
+```bash
+docker exec -it dns-unbound tcpdump -tttt -n -i any '(udp port 53 or tcp port 53)'
+```
+
+Выполним запрос и проверим логи в основном окне
+```bash
+dig @127.0.0.1 -p 2053 yandex.ru A
+docker compose logs --since=20s unbound
+```
+
+В логах видим `redis_hit qname=yandex.ru. qtype=A key=dns:cache:yandex.ru.:A`, а значит ответ подхватился с редиса, что согласуется с временем ответа
+![Скриншот6_5](assets/terminal_screenshot_6_5.png)
+
+А в логах tcpdump не видим чтобы он ходил в интернет
+![Скриншот6_6](assets/terminal_screenshot_6_6.png)
+В tcpdump наблюдался: входящий запрос клиента; исходящий ответ клиенту; но не наблюдалось нового внешнего запроса на A yandex.ru перед ответом.
+Это означало, что резолвер не выполнял обычное внешнее разрешение, а использовал данные из Redis.
+
+А значит Unbound способен использовать Redis не только как пассивное хранилище, но и как непосредственный источник DNS-ответа.
+
+## 1.2.Г Настроить время хранения ответов в этой внешней БД
+Цель - показать, что время хранения DNS-ответа во внешнем кэше Redis может быть настроено отдельно от исходного DNS TTL.
+В DNS есть исходный TTL записи, который приходит от авторитетного сервера.
+Во внешнем кэше Redis мы дополнительно задаем административное время хранения, которое может быть существенно больше.
+
+В эксперименте:
+- исходный TTL DNS-записи был 60 секунд;
+- административный TTL хранения в Redis был установлен равным 86400 секунд.
+
+Это было сделано таким образом:
+Сохранение записи во внешний кэш
+```bash
+python scripts/fill_cache.py yandex.ru A 86400
+```
+
+Вывод:
+```bash
+Stored in Redis: dns:cache:yandex.ru.:A
+Original TTL: 60
+External cache TTL: 86400
+```
+
+Проверка TTL ключа Redis
+```bash
+docker exec -it dns-redis redis-cli TTL dns:cache:yandex.ru.:A
+```
+
+И проверим DNS TTL
+```bash
+docker exec -it dns-redis redis-cli TTL dns:cache:yandex.ru.:A
+```
+![Скриншот6_7](assets/terminal_screenshot_6_7.png)
+
+На скриншоте видно, что в редисе хранится значение отличное от DNS TTL -> мозможность хранения отличного от стандартного TTL доказана
+
+В рамках раздела 1.2 был реализован внешний кэш DNS-ответов на базе Redis и интегрирован в DNS-резолвер Unbound через pythonmod.
+
+В результате удалось показать, что:
+- Redis может быть подключен непосредственно к резолверу;
+- резолвер способен различать redis_miss и redis_hit;
+- Unbound может отвечать клиенту непосредственно из внешней БД;
+- время хранения во внешнем кэше может быть задано отдельно от исходного DNS TTL.
+- Таким образом, был реализован механизм долговременного внешнего кэширования DNS-ответов, который расширяет стандартные возможности встроенного кэша Unbound и подготавливает основу для дальнейших экспериментов с локальными зонами и переопределением DNSSEC-подписанных доменов.

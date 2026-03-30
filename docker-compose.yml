@@ -7,17 +7,19 @@ services:
       - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
       - redis_data:/data
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   unbound:
     build: ./unbound
     container_name: dns-unbound
+    depends_on:
+      - redis
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      RETURN_TTL: 60
     ports:
       - "2053:53/udp"
       - "2053:53/tcp"
