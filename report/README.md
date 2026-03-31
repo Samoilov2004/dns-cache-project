@@ -22,7 +22,52 @@ docker compose exec redis redis-cli FLUSHALL
 ```
 
 # Общее описание архитектуры
-Тут надо вот этот блок расписать
+Общая схема DNS-запроса
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#ffffff",
+    "primaryColor": "#F8FAFC",
+    "primaryTextColor": "#0F172A",
+    "primaryBorderColor": "#334155",
+    "lineColor": "#475569",
+    "fontFamily": "Inter, Arial, sans-serif",
+    "fontSize": "16px"
+  }
+}}%%
+
+flowchart TD
+    A["Клиент отправляет DNS-запрос"] --> B{"Есть совпадение<br/>с локальной зоной?"}
+
+    B -->|Да| C["Ответ формируется<br/>из локальной зоны"]
+    B -->|Нет| D{"Есть запись<br/>во внешнем кэше Redis?"}
+
+    D -->|Да| E["Ответ формируется<br/>из Redis"]
+    D -->|Нет| F["Unbound выполняет<br/>рекурсивное разрешение"]
+
+    F --> G["Запрос к корневым DNS-серверам"]
+    G --> H["Переход к TLD-серверам"]
+    H --> I["Запрос к авторитетным DNS-серверам"]
+    I --> J["Резолвер получает DNS-ответ"]
+
+    J --> K["При необходимости запись<br/>сохраняется во внешний кэш"]
+    K --> L["Ответ возвращается клиенту"]
+
+    C --> M["Клиент получает локальный ответ"]
+    E --> N["Клиент получает ответ из Redis"]
+    L --> O["Клиент получает обычный DNS-ответ"]
+
+    classDef step fill:#EAF2FF,stroke:#2563EB,stroke-width:2px,color:#0F172A;
+    classDef decision fill:#FFF7ED,stroke:#EA580C,stroke-width:2px,color:#7C2D12;
+    classDef infra fill:#ECFDF5,stroke:#059669,stroke-width:2px,color:#064E3B;
+    classDef result fill:#F5F3FF,stroke:#7C3AED,stroke-width:2px,color:#4C1D95;
+
+    class A,C,E,F,J,K,L,M,N,O step;
+    class B,D decision;
+    class G,H,I infra;
+    class O result;
+```
 
 
 # 1.1 Проверка кэширования стандартными средствами резолвера.
