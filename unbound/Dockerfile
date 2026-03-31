@@ -35,6 +35,7 @@ RUN mkdir -p /usr/local/etc/unbound /var/lib/unbound /opt/unbound
 
 COPY unbound.conf /usr/local/etc/unbound/unbound.conf
 COPY root.hints /usr/local/etc/unbound/root.hints
+COPY local-zones.conf /usr/local/etc/unbound/local-zones.conf
 COPY redis_pythonmod.py /opt/unbound/redis_pythonmod.py
 
 EXPOSE 53/udp
