@@ -1,0 +1,229 @@
+\documentclass[a4paper,14pt]{extarticle}
+
+% -------------------- Кодировка и языки --------------------
+\usepackage[russian]{babel}
+
+% -------------------- Шрифты --------------------
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+
+% -------------------- Геометрия страницы --------------------
+\usepackage[
+    left=3cm,
+    right=1cm,
+    top=2cm,
+    bottom=2cm
+]{geometry}
+
+\setlength{\footskip}{62pt}
+
+% -------------------- Межстрочный интервал --------------------
+\usepackage{setspace}
+\onehalfspacing
+
+% -------------------- Абзацный отступ --------------------
+\usepackage{indentfirst}
+\setlength{\parindent}{1.25cm}
+
+% -------------------- Работа с графикой и таблицами --------------------
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+
+% Подписи рисунков и таблиц
+\addto\captionsrussian{%
+    \renewcommand{\figurename}{Рисунок}
+    \renewcommand{\tablename}{Таблица}
+}
+\captionsetup{
+    labelsep=endash,
+    justification=centering
+}
+
+% -------------------- Гиперссылки --------------------
+\usepackage[hidelinks]{hyperref}
+
+% -------------------- Листинги кода --------------------
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{codebg}{RGB}{245,245,245}
+\lstset{
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{codebg},
+    frame=single,
+    breaklines=true,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false
+}
+
+% -------------------- Заголовки --------------------
+\usepackage{titlesec}
+
+\titleformat{\section}
+  {\normalfont\bfseries\centering}
+  {\thesection}
+  {1em}
+  {}
+
+\titleformat{\subsection}
+  {\normalfont\bfseries\centering}
+  {\thesubsection}
+  {1em}
+  {}
+
+\titleformat{\subsubsection}
+  {\normalfont\bfseries\centering}
+  {\thesubsubsection}
+  {1em}
+  {}
+
+% -------------------- Нумерация страниц --------------------
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\setlength{\headheight}{17pt} % Исправляет предупреждение о headheight
+
+% -------------------- Название оглавления --------------------
+\renewcommand{\contentsname}{ОГЛАВЛЕНИЕ}
+
+\begin{document}
+
+% Тут содержимое документа
+
+
+% ============================================================
+% ТИТУЛЬНЫЙ ЛИСТ
+% ============================================================
+\thispagestyle{empty}
+\begin{titlepage}
+    \thispagestyle{empty}
+
+    \begin{center}
+        \textbf{} \\[0.5cm]
+        \textbf{} \\[0.5cm]
+        \textbf{}
+    \end{center}
+
+    \vspace{3cm}
+
+    \begin{center}
+        \textbf{\Large Техническое описание решения} \\[0.5cm]
+        \textbf{\large по направлению} \\[0.5cm]
+        \textbf{\Large «Кэширование DNS-ответов на время, отличное от TTL»}
+    \end{center}
+
+    \vspace{4cm}
+
+    \begin{flushright}
+        Самойлов Михаил Андреевич \\
+        Самойлов Михаил Андреевич \\
+    \end{flushright}
+
+    \vfill
+
+    
+
+    \begin{center}
+        Москва \\
+        2026
+    \end{center}
+
+    
+\end{titlepage}
+
+% Начиная со 2 страницы показываем номер
+\setcounter{page}{1}
+
+% ============================================================
+% ОГЛАВЛЕНИЕ
+% ============================================================
+\tableofcontents
+\newpage
+
+% ============================================================
+% ДАЛЬШЕ ПОЙДЕТ ТЕКСТ РАБОТЫ
+% ============================================================
+
+\section{Введение}
+\begin{lstlisting}
+docker compose up -d --build unbound
+docker compose up -d redis
+docker compose ps
+\end{lstlisting}
+
+Здесь кратко описывается актуальность темы, цель работы, задачи, объект исследования, предмет исследования и практическая значимость результата.
+
+\section{Общее описание архитектуры}
+\subsection{Описание стенда}
+\subsection{Схема обработки DNS-запроса}
+\subsection{Используемые инструменты}
+
+\section{Исследование стандартного кэширования резолвера}
+
+\subsection{Методика определения источника DNS-ответа}
+
+\subsection{Проверка кэширования стандартными средствами резолвера}
+
+\subsubsection{Проверка кэширования ответа \texttt{yandex.ru}}
+
+\subsubsection{Проверка работы механизма prefetch}
+
+\subsubsection{Принудительное изменение времени кэширования средствами Unbound}
+
+\subsubsection{Переполнение встроенного кэша и вытеснение записей}
+
+\section{Реализация внешнего кэша DNS-ответов}
+
+\subsection{Обоснование выбора Redis и PythonMod}
+
+\subsection{Подключение Redis к резолверу}
+
+\subsection{Проверка механизма \texttt{redis\_miss}/\texttt{redis\_hit}}
+
+\subsection{Формирование DNS-ответов из внешней базы данных}
+
+\subsection{Настройка времени хранения ответов, отличного от исходного TTL}
+
+\section{Локальное переопределение DNSSEC-подписанной зоны}
+
+\subsection{Выбор DNSSEC-подписанной зоны}
+
+\subsection{Размещение зоны локально на резолвере}
+
+\subsection{Настройка ответов из локальной зоны}
+
+\subsection{Сбор данных по зоне и генерация локального описания}
+
+\subsection{Подтверждение ответа из локальной базы данных}
+
+\section{Заключение}
+
+Здесь формулируются основные результаты работы и выводы по каждому из этапов исследования.
+
+\section{Список использованных источников}
+
+\begin{enumerate}
+    \item Документация Unbound.
+    \item Документация Redis.
+    \item RFC по DNS, DNSSEC и кэшированию.
+    \item Материалы по Docker и сетевой трассировке.
+\end{enumerate}
+
+\section*{Приложение А}
+\addcontentsline{toc}{section}{Приложение А}
+
+Здесь можно разместить дополнительные листинги конфигурации, скрипты и крупные фрагменты вывода команд.
+
+\section*{Приложение Б}
+\addcontentsline{toc}{section}{Приложение Б}
+
+Здесь можно разместить скриншоты и дополнительные иллюстрации.
+
+\end{document}
