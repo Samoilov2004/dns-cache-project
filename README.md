@@ -15,6 +15,8 @@
   </a>
 </p>
 
+
+
 ## Документы
 
 | | |
@@ -23,8 +25,38 @@
 | [Отчёт](report/main.docx) | Финальный отчёт |
 | [Черновик](report/README.md) | Файл с поэтапным решением, но в черновом варианте|
 
+**Компоненты:**
 
-## Архитектура
+| Компонент | Роль |
+|---|---|
+| **Unbound** | DNS-резолвер с поддержкой Python-модулей и локальных зон |
+| **Redis** | Внешний кэш — хранит DNS-ответы дольше TTL |
+| **Pythonmod** | Интеграция Unbound ↔ Redis, генерация зон |
+
+## Структура репозитория
+
+```
+dns-cache-project/
+├── unbound/
+│   ├── unbound.conf          # основная конфигурация резолвера
+│   ├── redis_pythonmod.py    # Python-модуль: интеграция с Redis
+│   ├── local-zones.conf      # локальные зоны (переопределение DNSSEC)
+│   ├── root.hints            # адреса корневых DNS-серверов
+│   └── Dockerfile            # образ Unbound
+├── redis/
+│   └── redis.conf            # конфигурация Redis
+├── scripts/
+│   ├── fill_cache.py         # заполнение Redis DNS-записями
+│   └── collect_zone.py       # сбор данных для локальных зон
+├── report/
+│   ├── README.md             # черновик отчёта
+│   ├── main.docx             # финальный отчёт
+│   ├── main.pptx             # презентация
+│   └── assets/               # скриншоты и иллюстрации
+└── docker-compose.yml        # инструкция запуска всего стека
+```
+
+## Схема рхитектуры DNS-резолвера с внешним кэшированием
 
 ```mermaid
 %%{init: {
@@ -43,30 +75,30 @@
 flowchart TD
 
     %% CLIENT
-    CLIENT["👤 Клиент<br/>dig / браузер / система"]
+    CLIENT["👤 Клиент"]
 
     %% ENTRY
-    UNBOUND["🧠 Unbound Resolver<br/>Core Engine"]
+    UNBOUND["🧠 Unbound<br/>Resolver"]
 
     %% MODULES
-    PYMOD["🐍 PythonMod<br/>Redis logic"]
-    VALIDATOR["🔐 DNSSEC Validator"]
-    ITERATOR["🌍 Recursive Resolver"]
+    PYMOD["🐍 PythonMod<br/>Redis логика"]
+    VALIDATOR["🔐 DNSSEC валидатор"]
+    ITERATOR["🌍 Рекурсивный резолвер"]
 
     %% DATA SOURCES
-    LOCAL["📁 Local Zones<br/>(override / static)"]
-    REDIS["⚡ Redis Cache<br/>External TTL storage"]
+    LOCAL["📁 Local Zones"]
+    REDIS["⚡ Redis Cache"]
 
-    ROOT["🌐 Root DNS"]
-    TLD["🌐 TLD Servers"]
-    AUTH["🌐 Authoritative DNS"]
+    ROOT["🌐 Корневой DNS"]
+    TLD["🌐 TLD - сервер"]
+    AUTH["🌐 Авторитативный DNS"]
 
     %% FLOW
 
     CLIENT --> UNBOUND
 
     %% LOCAL ZONE CHECK
-    UNBOUND -->|1. local-zone check| LOCAL
+    UNBOUND -->|1. local-zone проверка| LOCAL
     LOCAL -->|hit| RESPONSE_LOCAL["📦 Ответ из локальной зоны"]
 
     %% PYTHONMOD
@@ -112,35 +144,4 @@ flowchart TD
     class ROOT,TLD,AUTH ext;
 
     class RESPONSE_LOCAL,RESPONSE_REDIS,RESPONSE_AUTH result;
-```
-
-**Компоненты:**
-
-| Компонент | Роль |
-|---|---|
-| **Unbound** | DNS-резолвер с поддержкой Python-модулей и локальных зон |
-| **Redis** | Внешний кэш — хранит DNS-ответы дольше TTL |
-| **Pythonmod** | Интеграция Unbound ↔ Redis, генерация зон |
-
-## Структура репозитория
-
-```
-dns-cache-project/
-├── unbound/
-│   ├── unbound.conf          # основная конфигурация резолвера
-│   ├── redis_pythonmod.py    # Python-модуль: интеграция с Redis
-│   ├── local-zones.conf      # локальные зоны (переопределение DNSSEC)
-│   ├── root.hints            # адреса корневых DNS-серверов
-│   └── Dockerfile            # образ Unbound
-├── redis/
-│   └── redis.conf            # конфигурация Redis
-├── scripts/
-│   ├── fill_cache.py         # заполнение Redis DNS-записями
-│   └── collect_zone.py       # сбор данных для локальных зон
-├── report/
-│   ├── README.md             # черновик отчёта
-│   ├── main.docx             # финальный отчёт
-│   ├── main.pptx             # презентация
-│   └── assets/               # скриншоты и иллюстрации
-└── docker-compose.yml        # инструкция запуска всего стека
 ```
