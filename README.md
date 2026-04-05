@@ -58,7 +58,7 @@ dns-cache-project/
 
 ## Схема рхитектуры DNS-резолвера с внешним кэшированием
 
-![Scheme](report/assets/architecture_v2.png)
+![Scheme](report/assets/architecture_v2_dark_version.png)
 
 
 Mermaid код для генерации схемы 
