@@ -58,15 +58,19 @@ dns-cache-project/
 
 ## Схема рхитектуры DNS-резолвера с внешним кэшированием
 
-```mermaid
+![Scheme](assets/architecture_v2.png)
+
+
+Mermaid код для генерации схемы 
+```txt
 %%{init: {
   "theme": "base",
   "themeVariables": {
-    "background": "#0B1220",
-    "primaryColor": "#111827",
-    "primaryTextColor": "#E5E7EB",
-    "primaryBorderColor": "#3B82F6",
-    "lineColor": "#64748B",
+    "background": "#FFFFFF",
+    "primaryColor": "#F9FAFB",
+    "primaryTextColor": "#111827",
+    "primaryBorderColor": "#2563EB",
+    "lineColor": "#9CA3AF",
     "fontFamily": "Inter, Arial, sans-serif",
     "fontSize": "16px"
   }
@@ -127,12 +131,12 @@ flowchart TD
 
     %% STYLES
 
-    classDef client fill:#1E293B,stroke:#38BDF8,stroke-width:2px,color:#E0F2FE;
-    classDef core fill:#111827,stroke:#3B82F6,stroke-width:2px,color:#E5E7EB;
-    classDef module fill:#1F2937,stroke:#8B5CF6,stroke-width:2px,color:#DDD6FE;
-    classDef data fill:#052E16,stroke:#10B981,stroke-width:2px,color:#D1FAE5;
-    classDef ext fill:#3F1D2E,stroke:#F43F5E,stroke-width:2px,color:#FFE4E6;
-    classDef result fill:#1E1B4B,stroke:#6366F1,stroke-width:2px,color:#E0E7FF;
+    classDef client fill:#EFF6FF,stroke:#3B82F6,stroke-width:2px,color:#1E3A8A;
+    classDef core fill:#F1F5F9,stroke:#2563EB,stroke-width:2px,color:#0F172A;
+    classDef module fill:#F5F3FF,stroke:#7C3AED,stroke-width:2px,color:#4C1D95;
+    classDef data fill:#ECFDF5,stroke:#10B981,stroke-width:2px,color:#065F46;
+    classDef ext fill:#FFF1F2,stroke:#F43F5E,stroke-width:2px,color:#7F1D1D;
+    classDef result fill:#EEF2FF,stroke:#6366F1,stroke-width:2px,color:#1E1B4B;
 
     class CLIENT client;
     class UNBOUND core;
