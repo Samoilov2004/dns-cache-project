@@ -15,7 +15,14 @@
   </a>
 </p>
 
-> Кэширование DNS с помощью Redis — хранение записей дольше исходного TTL, локальное переопределение DNSSEC-зон.
+## Документы
+
+| | |
+|---|---|
+| [Презентация](report/main.pptx) | Итоговая презентация проекта |
+| [Отчёт](report/main.docx) | Финальный отчёт |
+| [Черновик](report/README.md) | Файл с поэтапным решением, но в черновом варианте|
+
 
 ## Архитектура
 
@@ -23,64 +30,88 @@
 %%{init: {
   "theme": "base",
   "themeVariables": {
-    "background": "#ffffff",
-    "primaryColor": "#EAF2FF",
-    "primaryTextColor": "#0F172A",
-    "primaryBorderColor": "#2563EB",
-    "lineColor": "#475569",
-    "secondaryColor": "#FFF1F2",
-    "tertiaryColor": "#F8FAFC",
+    "background": "#0B1220",
+    "primaryColor": "#111827",
+    "primaryTextColor": "#E5E7EB",
+    "primaryBorderColor": "#3B82F6",
+    "lineColor": "#64748B",
     "fontFamily": "Inter, Arial, sans-serif",
     "fontSize": "16px"
   }
 }}%%
 
-flowchart LR
-    client["Клиент"]
+flowchart TD
 
-    subgraph unbound["DNS-резолвер Unbound"]
-        direction TB
-        u0["Ядро резолвера"]
-        u1["Стандартный кэш"]
-        u2["Python-модуль"]
-        u3["Локальная зона"]
-    end
+    %% CLIENT
+    CLIENT["👤 Клиент<br/>dig / браузер / система"]
 
-    subgraph redis["Внешний кэш Redis"]
-        direction TB
-        r1[("Redis")]
-        r2["Долговременное хранение"]
-    end
+    %% ENTRY
+    UNBOUND["🧠 Unbound Resolver<br/>Core Engine"]
 
-    subgraph publicdns["Публичная DNS-инфраструктура"]
-        direction TB
-        p1["Корневые серверы"]
-        p2["TLD-серверы"]
-        p3["Авторитетные серверы"]
-    end
+    %% MODULES
+    PYMOD["🐍 PythonMod<br/>Redis logic"]
+    VALIDATOR["🔐 DNSSEC Validator"]
+    ITERATOR["🌍 Recursive Resolver"]
 
-    client -->|"DNS-запрос"| u0
-    u0 --> u1
-    u0 --> u2
-    u0 --> u3
-    u2 <-->|"кэш"| r1
-    r1 --> r2
-    u0 -->|"рекурсия"| p1
-    p1 --> p2
-    p2 --> p3
-    p3 -->|"ответ"| u0
-    u3 -->|"локальный ответ"| client
-    u1 -->|"ответ из кэша"| client
+    %% DATA SOURCES
+    LOCAL["📁 Local Zones<br/>(override / static)"]
+    REDIS["⚡ Redis Cache<br/>External TTL storage"]
 
-    classDef clientStyle fill:#F8FAFC,stroke:#0F172A,stroke-width:2px,color:#0F172A;
-    classDef unboundStyle fill:#EAF2FF,stroke:#2563EB,stroke-width:2px,color:#0F172A;
-    classDef redisStyle fill:#FFF1F2,stroke:#DC2626,stroke-width:2px,color:#0F172A;
-    classDef dnsStyle fill:#ECFDF5,stroke:#059669,stroke-width:2px,color:#0F172A;
+    ROOT["🌐 Root DNS"]
+    TLD["🌐 TLD Servers"]
+    AUTH["🌐 Authoritative DNS"]
 
-    class client clientStyle;
-    class u0,u1,u2,u3 unboundStyle;
-    class r1,r2 redisStyle;
-    class p1,p2,p3 dnsStyle;
+    %% FLOW
+
+    CLIENT --> UNBOUND
+
+    %% LOCAL ZONE CHECK
+    UNBOUND -->|1. local-zone check| LOCAL
+    LOCAL -->|hit| RESPONSE_LOCAL["📦 Ответ из локальной зоны"]
+
+    %% PYTHONMOD
+    UNBOUND -->|2. pythonmod hook| PYMOD
+    PYMOD -->|redis hit| RESPONSE_REDIS["⚡ Ответ из Redis"]
+    PYMOD -->|redis miss| ITERATOR
+
+    %% RECURSION
+    ITERATOR --> ROOT
+    ROOT --> TLD
+    TLD --> AUTH
+    AUTH --> RESPONSE_AUTH["📡 DNS ответ"]
+
+    %% DNSSEC
+    RESPONSE_AUTH --> VALIDATOR
+    VALIDATOR -->|validated| CACHE_STORE
+
+    %% STORE
+    CACHE_STORE["💾 Cache Pipeline"] --> REDIS
+    CACHE_STORE --> UNBOUND_CACHE["🧩 Internal Cache"]
+
+    %% RETURN
+    RESPONSE_LOCAL --> CLIENT
+    RESPONSE_REDIS --> CLIENT
+    VALIDATOR --> CLIENT
+
+    %% STYLES
+
+    classDef client fill:#1E293B,stroke:#38BDF8,stroke-width:2px,color:#E0F2FE;
+    classDef core fill:#111827,stroke:#3B82F6,stroke-width:2px,color:#E5E7EB;
+    classDef module fill:#1F2937,stroke:#8B5CF6,stroke-width:2px,color:#DDD6FE;
+    classDef data fill:#052E16,stroke:#10B981,stroke-width:2px,color:#D1FAE5;
+    classDef ext fill:#3F1D2E,stroke:#F43F5E,stroke-width:2px,color:#FFE4E6;
+    classDef result fill:#1E1B4B,stroke:#6366F1,stroke-width:2px,color:#E0E7FF;
+
+    class CLIENT client;
+    class UNBOUND core;
+
+    class PYMOD,VALIDATOR,ITERATOR module;
+
+    class LOCAL,REDIS,UNBOUND_CACHE data;
+
+    class ROOT,TLD,AUTH ext;
+
+    class RESPONSE_LOCAL,RESPONSE_REDIS,RESPONSE_AUTH result;
 ```
 
 **Компоненты:**
@@ -111,13 +142,5 @@ dns-cache-project/
 │   ├── main.docx             # финальный отчёт
 │   ├── main.pptx             # презентация
 │   └── assets/               # скриншоты и иллюстрации
-└── docker-compose.yml        # запуск всего стека
+└── docker-compose.yml        # инструкция запуска всего стека
 ```
-
-## Документы
-
-| | |
-|---|---|
-| [Презентация](report/main.pptx) | Слайды проекта |
-| [Отчёт](report/main.docx) | Финальный отчёт |
-| [Черновик](report/README.md) | Текстовый вариант |
